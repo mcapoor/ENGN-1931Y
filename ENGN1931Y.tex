@@ -27,7 +27,8 @@
 \usepackage[numbered,framed]{matlab-prettifier}
 \lstset{
   style              = Matlab-editor,
-  basicstyle         = \mlttfamily,
+  basicstyle         = \fontencoding{T1}\fontfamily{zi4}\selectfont\small, % Inconsolata, close to MATLAB's editor font
+  numberstyle        = \fontencoding{T1}\fontfamily{zi4}\selectfont\scriptsize\color{gray},
   escapechar         = ",
   mlshowsectionrules = true,
 }
@@ -870,6 +871,712 @@ What is the transfer function of this system?
     E = R - CH\\
     C = GE
 \end{cases} \implies C = G(R - CH) \implies C = \frac{GR}{1 + GH} \implies \frac{C}{R} = \frac{G}{1 + GH}\]
-.
 
+\section{Sept 24}
+
+\tbf{Recall:} For a block diagram
+
+\begin{center}
+\begin{tikzpicture}[blockdiagram, node distance=1.2cm and 2.5cm]
+    \node[input]                        (in)     {};
+    \node[block, right=of in]          (ctrl)   {$H$};
+    \node[output, right=1cm of ctrl]   (out)    {};
+
+    \draw[->] (in) -- node[above] {$R$} (ctrl);
+    \draw[->] (ctrl) -- (out) node[above left] {$Y$};
+\end{tikzpicture}
+\end{center}
+
+the transfer function is 
+\[H(s) = \frac{Y(s)}{R(s)}\]
+
+and the transfer function can be of any order:
+\[H(s) = \frac{a_0 s^n + a_1 s^{n-1} + \dots + a_{n-1} s + a_n}{b_0 s^m + b_1 s^{m-1} + \dots + b_{m-1} s + b_m}\]
+
+If $m > n$, we can use partial fractions to decompose the transfer function into a sum of first (a system with real poles) and second order systems (those with complex poles).
+
+If $m = n$, the transfer function will be of the form $H(s) = 1 + \dots$. 
+
+In general, a first order system will nicely converge to a steady state value, while a second order system will oscillate around the steady state value.
+
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.6\textwidth, height=5cm,
+    axis lines=left,
+    no markers,
+    xtick=\empty,
+    ytick={1},
+    yticklabels={},
+    xlabel={$t$},
+    ylabel={},
+    domain=0:10, samples=200,
+    xmin=0, xmax=10,
+    ymin=0, ymax=1.8,
+    clip=false,
+]
+    \addplot[dashed, gray, domain=0:10, samples=2] {1};
+    \addplot[thick, blue] {1 - exp(-x)} node[pos=0.12, below right] {1st order};
+    \addplot[thick, red] {1 - exp(-0.3*x)*(cos(deg(1.98*x)) + 0.152*sin(deg(1.98*x)))}
+        node[pos=0.16, above right, yshift=2.5ex] {2nd order};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+We can always represent the poles of a second order system in the form $s^2 + 2\zeta \omega_n s + \omega_n^2$ for $0 \leq \zeta \leq 1$. (If $\zeta = 1$, the system will have two real poles). 
+
+\begin{exercise}
+    \textbf{Exercise:} What is the transfer function of the following system?
+
+    \begin{center}
+    \begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 0.8cm]
+        \node[input]                       (in)     {};
+        \node[block, right=of in]          (g3)     {$G_3$};
+        \node[sum, right=of g3]            (sum1)   {$\sum$};
+        \node[branch, right=0.6cm of sum1] (split1) {};
+        \node[block, right=of split1]      (g1)     {$G_1$};
+        \node[block, right=of g1]          (g2)     {$G_2$};
+        \node[block, above=0.6cm of $(g1)!0.5!(g2)$] (f) {$F$};
+        \node[sum, right=of g2]            (sum2)   {$\sum$};
+        \node[branch, right=0.6cm of sum2] (split2) {};
+        \node[output, right=0.8cm of split2] (out)  {};
+        \node[block, below=of g2]          (h1)     {$H_1$};
+        \node[block, below=of g1]          (h2)     {$H_2$};
+
+        \draw[->] (in) -- node[above] {$R$} (g3);
+        \draw[->] (g3) -- node[plus] {$+$} (sum1);
+        \draw (sum1) -- node[above] {$E$} (split1);
+        \draw[->] (split1) -- (g1);
+        \draw[->] (g1) -- (g2);
+        \draw[->] (split1) |- (f);
+        \draw[->] (g2) -- node[plus] {$+$} (sum2);
+        \draw[->] (f) -| node[pos=0.9, left] {$+$} (sum2);
+        \draw[->] (sum2) -- (out) node[above left] {$C$};
+
+        \draw[->] (split2) |- (h1);
+        \draw[->] (h1) -- (h2);
+        \draw[->] (h2) -| node[pos=0.95, right] {$-$} (sum1);
+    \end{tikzpicture}
+    \end{center}
+
+       \[\begin{cases}
+        E = RG_3 - H_2 H_1 C\\ 
+        \begin{aligned}
+            C &= EF + EG_1 G_2\\ 
+            & = E(F + G_1 G_2)
+        \end{aligned} 
+    \end{cases}\]
+
+    \begin{align*}
+        C &= (RG_3 - H_2 H_1 C)(F + G_1 G_2)\\
+        &= RG_3(F + G_1 G_2) - H_2 H_1 C (F + G_1 G_2)\\
+        C\left[1 + H_2 H_1 (F + G_1 G_2)\right] &= RG_3(F + G_1 G_2)\\
+        \frac{C}{R} &= \frac{G_3(F + G_1 G_2)}{1 + H_2 H_1(F + G_1 G_2)}
+    \end{align*}
+
+    We can also use block diagram reduction to simplify the system. First, we can combine $G_1$ and $G_2$ in series, then combine $H_1$ and $H_2$ in series, then combine the two feedback loops into one, and finally combine $G_3$ with the rest of the system in series.
+
+    \begin{center}
+    \begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 0.8cm]
+        \node[input]                       (in)    {};
+        \node[block, right=of in]          (g3)    {$G_3$};
+        \node[sum, right=of g3]            (sum)   {$\sum$};
+        \node[block, right=of sum]         (fwd)   {$G_1G_2 + F$};
+        \node[branch, right=0.8cm of fwd]  (split) {};
+        \node[output, right=0.8cm of split] (out)  {};
+        \node[block, below=of fwd]         (fb)    {$H_1H_2$};
+
+        \draw[->] (in) -- node[above] {$R$} (g3);
+        \draw[->] (g3) -- node[plus] {$+$} (sum);
+        \draw[->] (sum) -- node[above] {$E$} (fwd);
+        \draw[->] (fwd) -- (out) node[above left] {$C$};
+
+        \draw[->] (split) |- (fb);
+        \draw[->] (fb) -| node[pos=0.95, right] {$-$} (sum);
+    \end{tikzpicture}
+    \end{center}
+
+    Which, using the general formula, gives 
+    \[\frac{C}{G_3R} = \frac{F + G_1G_2}{1 + (H_1H_2)(F + G_1G_2)} \implies \frac{C}{R} = \frac{G_3(F + G_1G_2)}{1 + (H_1H_2)(F + G_1G_2)}\]
+\end{exercise}
+
+In the example above, we call the $F$ branch a \emph{feedforward} branch, while the $H_1H_2$ branch is a \emph{feedback} branch. $G_1G_2$ is assumed to be the \emph{plant control}.
+
+\begin{exercise}
+    \textbf{Exercise:} Find the transfer function of the system 
+       \begin{center}
+    \begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 0.8cm]
+        \node[input]                       (in)    {};
+        \node[sum, right=of g3]            (sum)   {$\sum$};
+        \node[block, right=of sum]         (fwd)   {$G_1 + F$};
+        \node[branch, right=0.8cm of fwd]  (split) {};
+        \node[output, right=0.8cm of split] (out)  {};
+        \node[block, below=of fwd]         (fb)    {$H_2$};
+
+        \draw[->] (in) -- node[above] {$R$} (g3);
+        \draw[->] (g3) -- node[plus] {$+$} (sum);
+        \draw[->] (sum) -- node[above] {$E$} (fwd);
+        \draw[->] (fwd) -- (out) node[above left] {$C$};
+
+        \draw[->] (split) |- (fb);
+        \draw[->] (fb) -| node[pos=0.95, right] {$-$} (sum);
+    \end{tikzpicture}
+    \end{center}
+    where $F = 1$, $G_1 = \frac{5}{s + 5}$, $H_2 = \frac{7}{s + 7}$,
+
+    \begin{align*}
+        \frac{C}{R} &= \frac{G_1 + F}{1 + H_2(G_1 + F)}\\
+        &= \frac{\frac{5}{s + 5} + 1}{1 + \frac{7}{s + 7}\left(\frac{5}{s + 5} + 1\right)}\\
+        &= \frac{\frac{5 + s + 5}{s + 5}}{\frac{(s + 7)(s + 5) + 7(5 + s + 5)}{(s + 7)(s + 5)}}\\
+        &= \frac{(s + 7)(s + 10)}{(s + 7)(s + 5) + 7(s + 10)}\\
+        &= \frac{(s+7)(s+10)}{s^2 + 19s + 105}
+    \end{align*}
+\end{exercise}
+
+\begin{exercise}
+    \textbf{Exercise:} Find the transfer function of the system
+
+    \begin{center}
+    \begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.1cm, minimum height=0.8cm}, node distance=0.8cm and 0.7cm]
+        \node[input]                         (in)    {};
+        \node[sum, right=0.9cm of in]        (sum1)  {$\sum$};
+        \node[sum, right=of sum1]            (sum2)  {$\sum$};
+        \node[block, right=of sum2]          (g1)    {$G_1$};
+        \node[sum, right=of g1]              (sum3)  {$\sum$};
+        \node[block, right=of sum3]          (g2)    {$G_2$};
+        \node[branch, right=0.5cm of g2]     (pm)    {};
+        \node[block, right=0.5cm of pm]      (g3)    {$G_3$};
+        \node[branch, right=0.5cm of g3]     (p1)    {};
+        \node[branch, right=0.5cm of p1]     (p3)    {};
+        \node[output, right=0.6cm of p3]     (out)   {};
+        \node[block, above=0.6cm of $(g2)!0.5!(g3)$] (h2) {$H_2$};
+        \node[block, below=of g1]            (h1)    {$H_1$};
+
+        \draw[->] (in) -- node[above] {$R$} node[plus] {$+$} (sum1);
+        \draw[->] (sum1) -- (sum2);
+        \draw[->] (sum2) -- (g1);
+        \draw[->] (g1) -- (sum3);
+        \draw[->] (sum3) -- (g2);
+        \draw[->] (g2) -- (g3);
+        \draw[->] (g3) -- (out) node[above left] {$C$};
+
+        % inner loop
+        \draw[->] (p1) |- (h2);
+        \draw[->] (h2) -| node[pos=0.9, left] {$+$} (sum3);
+
+        % middle loop (picked off between G_2 and G_3)
+        \draw[->] (pm) |- (h1);
+        \draw[->] (h1) -| node[pos=0.9, right] {$+$} (sum2);
+
+        % outer loop
+        \draw[->] (p3) |- ($(h1.south)+(0,-0.6)$) -| node[pos=0.95, right] {$-$} (sum1);
+    \end{tikzpicture}
+    \end{center}
+
+    The trick is to simplify: 
+
+    \begin{center}
+    \begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.1cm, minimum height=0.8cm}, node distance=0.8cm and 0.7cm]
+        \node[input]                         (in)    {};
+        \node[sum, right=0.9cm of in]        (sum1)  {$\sum$};
+        \node[sum, right=of sum1]            (sum2)  {$\sum$};
+        \node[block, right=of sum2]          (g1)    {$G_1$};
+        \node[sum, right=of g1]              (sum3)  {$\sum$};
+        \node[block, right=of sum3]          (g2)    {$G_2$};
+        \node[block, right=of g2]            (g3)    {$G_3$};
+        \node[branch, right=0.5cm of g3]     (p1)    {};
+        \node[branch, right=0.5cm of p1]     (p2)    {};
+        \node[branch, right=0.5cm of p2]     (p3)    {};
+        \node[output, right=0.6cm of p3]     (out)   {};
+        \node[block, above=0.6cm of $(g2)!0.5!(g3)$] (h2) {$H_2$};
+        \node[block, below=of g3]            (ig3)   {$\frac{1}{G_3}$};
+        \node[block, below=of g1]            (h1)    {$H_1$};
+
+        \draw[->] (in) -- node[above] {$R$} node[plus] {$+$} (sum1);
+        \draw[->] (sum1) -- (sum2);
+        \draw[->] (sum2) -- (g1);
+        \draw[->] (g1) -- (sum3);
+        \draw[->] (sum3) -- (g2);
+        \draw[->] (g2) -- (g3);
+        \draw[->] (g3) -- (out) node[above left] {$C$};
+
+        % inner loop
+        \draw[->] (p1) |- (h2);
+        \draw[->] (h2) -| node[pos=0.9, left] {$+$} (sum3);
+
+        % middle loop
+        \draw[->] (p2) |- (ig3);
+        \draw[->] (ig3) -- (h1);
+        \draw[->] (h1) -| node[pos=0.9, right] {$+$} (sum2);
+
+        % outer loop
+        \draw[->] (p3) |- ($(h1.south)+(0,-0.6)$) -| node[pos=0.95, right] {$-$} (sum1);
+
+        % inner loop outline
+        \draw[blue!60, rounded corners] ($(sum3.west |- h2.north)+(-0.3,0.25)$) rectangle ($(p1 |- g3.south)+(0.25,-0.25)$) node[above right, yshift=0.8in] {$T_1$};
+    \end{tikzpicture}
+    \end{center}
+
+    Inner block:
+    \[T_1  = \frac{G_2 G_3}{1 - G_2 G_3 H_2}\]
+    (notice the flipped sign in the denominator because the feedback is positive).
+
+    \begin{center}
+    \begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.1cm, minimum height=0.8cm}, node distance=0.8cm and 0.7cm]
+        \node[input]                         (in)    {};
+        \node[sum, right=0.9cm of in]        (sum1)  {$\sum$};
+        \node[sum, right=of sum1]            (sum2)  {$\sum$};
+        \node[block, right=of sum2]          (t1)    {$G_1T_1$};
+        \node[branch, right=0.7cm of t1]     (p2)    {};
+        \node[branch, right=0.5cm of p2]     (p3)    {};
+        \node[output, right=0.6cm of p3]     (out)   {};
+        \node[block, below=of t1]            (h1)    {$\frac{H_1}{G_3}$};
+
+        \draw[->] (in) -- node[above] {$R$} node[plus] {$+$} (sum1);
+        \draw[->] (sum1) -- (sum2);
+        \draw[->] (sum2) -- (t1);
+        \draw[->] (t1) -- (out) node[above left] {$C$};
+
+        % middle loop
+        \draw[->] (p2) |- (h1);
+        \draw[->] (h1) -| node[pos=0.9, right] {$+$} (sum2);
+
+        % outer loop
+        \draw[->] (p3) |- ($(h1.south)+(0,-0.6)$) -| node[pos=0.95, right] {$-$} (sum1);
+    \end{tikzpicture}
+    \end{center}
+
+    Then letting,
+    \[T_2 = \frac{H_1}{G_3}\]
+    we have 
+    \[T_3 = \frac{G_1 T_1}{1 - G_1 T_1 T_2}\]
+
+    \begin{center}
+    \begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.1cm, minimum height=0.8cm}, node distance=0.8cm and 0.7cm]
+        \node[input]                         (in)    {};
+        \node[sum, right=0.9cm of in]        (sum1)  {$\sum$};
+        \node[block, right=of sum1]          (t3)    {$T_3$};
+        \node[branch, right=0.7cm of t3]     (p3)    {};
+        \node[output, right=0.6cm of p3]     (out)   {};
+
+        \draw[->] (in) -- node[above] {$R$} node[plus] {$+$} (sum1);
+        \draw[->] (sum1) -- (t3);
+        \draw[->] (t3) -- (out) node[above left] {$C$};
+
+        % outer loop
+        \draw[->] (p3) |- ($(t3.south)+(0,-0.6)$) -| node[pos=0.95, right] {$-$} (sum1);
+    \end{tikzpicture}
+    \end{center}
+
+    And finally, 
+    \[\frac{C}{R} = \frac{T_3}{1 + T_3}\]
+
+\end{exercise}
+
+As you can see, block diagram reduction is a very useful tool for simplifying complex systems. It allows us to break down the system into smaller, more manageable parts, and then combine them to find the overall transfer function. However, this is still a very tedious process, and it is easy to make mistakes.
+
+Let's use Matlab instead. 
+
+\tbf{Example:}
+\begin{center}
+\begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.4cm, minimum height=0.9cm}, node distance=0.8cm and 1cm]
+    \node[input]                         (in)    {};
+    \node[sum, right=of in]              (sum)   {$\sum$};
+    \node[block, right=of sum]           (g)     {$G = \frac{10}{s + 10}$};
+    \node[branch, right=0.8cm of g]      (split) {};
+    \node[output, right=0.8cm of split]  (out)   {};
+    \node[block, below=of g]             (f)     {$F = \frac{1}{s + 25}$};
+
+    \draw[->] (in) -- node[above] {$R$} node[plus] {$+$} (sum);
+    \draw[->] (sum) -- (g);
+    \draw[->] (g) -- (out) node[above left] {$C$};
+
+    \draw[->] (split) |- (f);
+    \draw[->] (f) -| node[pos=0.95, right] {$-$} (sum);
+\end{tikzpicture}
+\end{center}
+
+\begin{lstlisting}
+    s = tf('s');
+    G = 10/(s + 10); 
+
+    step(G) % gets the step response of the system
+    impulse(G) % gets the impulse response of the system
+
+    F = 1/(s + 25); 
+    CLTF = feedback(G, F) % gets the closed loop transfer function of the system
+\end{lstlisting}
+
+This will output 
+\[\tt{CLTF} = \frac{10s + 250}{s^2 + 35s + 250}\]
+
+\tbf{Example:} 
+
+    \begin{center}
+    \begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 0.8cm]
+        \node[input]                       (in)     {};
+        \node[block, right=of in]          (g3)     {$G_1$};
+        \node[sum, right=of g3]            (sum1)   {$\sum$};
+        \node[branch, right=0.6cm of sum1] (split1) {};
+        \node[block, right=of split1]      (g12)    {$G_2$};
+        \node[block, above=0.6cm of g12]   (f)      {$F$};
+        \node[sum, right=of g12]           (sum2)   {$\sum$};
+        \node[branch, right=0.6cm of sum2] (split2) {};
+        \node[output, right=0.8cm of split2] (out)  {};
+        \node[block, below=of g12]         (h12)    {$H$};
+
+        \draw[->] (in) -- node[above] {$R$} (g3);
+        \draw[->] (g3) -- node[plus] {$+$} (sum1);
+        \draw (sum1) -- node[above] {$E$} (split1);
+        \draw[->] (split1) -- (g12);
+        \draw[->] (split1) |- (f);
+        \draw[->] (g12) -- node[plus] {$+$} (sum2);
+        \draw[->] (f) -| node[pos=0.9, left] {$+$} (sum2);
+        \draw[->] (sum2) -- (out) node[above left] {$C$};
+
+        \draw[->] (split2) |- (h12);
+        \draw[->] (h12) -| node[pos=0.95, right] {$-$} (sum1);
+    \end{tikzpicture}
+    \end{center}
+
+    We can define $Q_1 = F + G_2$ so the system can be solved with 
+    \begin{lstlisting}
+        s = tf('s');
+        syms F G1 G2 H; 
+        Q = G + G2; 
+
+        M = feedback(Q, H); 
+        CLTF = Series(M, G1)       
+
+        ltview(CLTF) %  opens the linear system analyzer
+\end{lstlisting}
+
+\begin{exercise}
+    \textbf{Exercise:}  Find $\frac{C}{R}$ for the system
+
+\begin{center}
+\begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 0.8cm]
+    \node[input]                          (in)    {};
+    \node[sum, right=of in]               (sum1)  {$\sum$};
+    \node[block, right=of sum1]           (g1)    {$G_1$};
+    \node[sum, right=of g1]               (sum2)  {$\sum$};
+    \node[branch, right=0.6cm of sum2]    (pa)    {};
+    \node[block, right=of pa]             (g2)    {$G_2$};
+    \node[branch, right=0.6cm of g2]      (pb)    {};
+    \node[sum, right=0.6cm of pb]         (sum3)  {$\sum$};
+    \node[block, right=of sum3]           (g3)    {$G_3$};
+    \node[branch, right=0.6cm of g3]      (pc)    {};
+    \node[output, right=0.8cm of pc]      (out)   {};
+    \node[block, below=of g2]             (h2)    {$H_2$};
+    \node[block, below=0.5cm of h2.south -| g1] (h1) {$H_1$};
+    \node[block, below=of g3]             (h3)    {$H_3$};
+
+    \draw[->] (in) -- node[above] {$R$} node[plus] {$+$} (sum1);
+    \draw[->] (sum1) -- (g1);
+    \draw[->] (g1) -- node[plus] {$+$} (sum2);
+    \draw (sum2) -- (pa);
+    \draw[->] (pa) -- (g2);
+    \draw (g2) -- (pb);
+    \draw[->] (pb) -- node[plus] {$+$} (sum3);
+    \draw[->] (sum3) -- (g3);
+    \draw[->] (g3) -- (out) node[above left] {$C$};
+
+    % feedforward around G_2
+    \draw[->] (pa) |- ($(g2.north)+(0,0.6)$) -| node[pos=0.9, left] {$+$} (sum3);
+
+    % H_2 and H_1 picked off after G_2
+    \draw[->] (pb) |- (h2);
+    \draw[->] (h2) -| node[pos=0.95, right] {$-$} (sum2);
+    \draw[->] (pb) |- (h1);
+    \draw[->] (h1) -| node[pos=0.95, right] {$-$} (sum1);
+
+    % H_3 around G_3
+    \draw[->] (pc) |- (h3);
+    \draw[->] (h3) -| node[pos=0.95, right] {$-$} (sum3);
+\end{tikzpicture}
+\end{center}
+
+Letting
+\[T_1 = \frac{G_2}{1 + G_2H_2}\]
+and moving the feedforward branch to after $T_1$, we have
+
+\begin{center}
+\begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 0.8cm]
+    \node[input]                          (in)    {};
+    \node[sum, right=of in]               (sum1)  {$\sum$};
+    \node[block, right=of sum1]           (g1)    {$G_1$};
+    \node[block, right=of g1]             (t1)    {$T_1$};
+    \node[branch, right=0.6cm of t1]      (pb)    {};
+    \node[branch, right=0.5cm of pb]      (pf)    {};
+    \node[sum, right=1.8cm of pf]         (sum3)  {$\sum$};
+    \node[block, above=0.6cm of $(pf)!0.5!(sum3)$] (ig2) {$\frac{1}{G_2}$};
+    \node[block, right=of sum3]           (g3)    {$G_3$};
+    \node[branch, right=0.6cm of g3]      (pc)    {};
+    \node[output, right=0.8cm of pc]      (out)   {};
+    \node[block, below=of t1]             (h1)    {$H_1$};
+    \node[block, below=of g3]             (h3)    {$H_3$};
+
+    \draw[->] (in) -- node[above] {$R$} node[plus] {$+$} (sum1);
+    \draw[->] (sum1) -- (g1);
+    \draw[->] (g1) -- (t1);
+    \draw[->] (t1) -- node[plus] {$+$} (sum3);
+    \draw[->] (sum3) -- (g3);
+    \draw[->] (g3) -- (out) node[above left] {$C$};
+
+    % feedforward, pickoff moved past G_2
+    \draw[->] (pf) |- (ig2);
+    \draw[->] (ig2) -| node[pos=0.9, left] {$+$} (sum3);
+
+    % H_1 picked off after T_1
+    \draw[->] (pb) |- (h1);
+    \draw[->] (h1) -| node[pos=0.95, right] {$-$} (sum1);
+
+    % H_3 around G_3
+    \draw[->] (pc) |- (h3);
+    \draw[->] (h3) -| node[pos=0.95, right] {$-$} (sum3);
+\end{tikzpicture}
+\end{center}
+
+With 
+\[T_2 = \frac{T_1 G_1}{1 + T_1 G_1 H_1}\]
+the first section simplifies into a single block:
+
+
+\begin{center}
+\begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 0.8cm]
+    \node[input]                          (in)    {};
+    \node[block, right=of in]             (t2)    {$T_2$};
+    \node[branch, right=0.6cm of t2]      (pf)    {};
+    \node[sum, right=1.8cm of pf]         (sum3)  {$\sum$};
+    \node[block, above=0.6cm of $(pf)!0.5!(sum3)$] (ig2) {$\frac{1}{G_2}$};
+    \node[block, right=of sum3]           (g3)    {$G_3$};
+    \node[branch, right=0.6cm of g3]      (pc)    {};
+    \node[output, right=0.8cm of pc]      (out)   {};
+    \node[block, below=of g3]             (h3)    {$H_3$};
+
+    \draw[->] (in) -- node[above] {$R$} (t2);
+    \draw[->] (t2) -- node[plus] {$+$} (sum3);
+    \draw[->] (sum3) -- (g3);
+    \draw[->] (g3) -- (out) node[above left] {$C$};
+
+    % feedforward
+    \draw[->] (pf) |- (ig2);
+    \draw[->] (ig2) -| node[pos=0.9, left] {$+$} (sum3);
+
+    % H_3 around G_3
+    \draw[->] (pc) |- (h3);
+    \draw[->] (h3) -| node[pos=0.95, right] {$-$} (sum3);
+\end{tikzpicture}
+\end{center}
+
+And finally, 
+\[T_3 = \frac{G_3}{1 + G_3 H_3}\]
+gives a simple parallel-series system to be solved by matlab:
+
+\begin{center}
+\begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 0.8cm]
+    \node[input]                          (in)    {};
+    \node[block, right=of in]             (t2)    {$T_2$};
+    \node[branch, right=0.6cm of t2]      (pf)    {};
+    \node[sum, right=1.8cm of pf]         (sum3)  {$\sum$};
+    \node[block, above=0.6cm of $(pf)!0.5!(sum3)$] (ig2) {$\frac{1}{G_2}$};
+    \node[block, right=of sum3]           (t3)    {$T_3$};
+    \node[output, right=of t3]            (out)   {};
+
+    \draw[->] (in) -- node[above] {$R$} (t2);
+    \draw[->] (t2) -- node[plus] {$+$} (sum3);
+    \draw[->] (sum3) -- (t3);
+    \draw[->] (t3) -- (out) node[above left] {$C$};
+
+    % feedforward
+    \draw[->] (pf) |- (ig2);
+    \draw[->] (ig2) -| node[pos=0.9, left] {$+$} (sum3);
+\end{tikzpicture}
+\end{center}
+
+\end{exercise}
+
+
+\section{Sept 29}
+
+We can view a system
+
+\begin{center}
+\begin{tikzpicture}[blockdiagram, node distance=1.2cm and 2.5cm]
+    \node[input]                        (in)     {};
+    \node[block, right=1cm of in]          (ctrl)   {Sys};
+    \node[output, right=1cm of ctrl]   (out)    {};
+
+    \draw[->] (in) -- node[above left] {$u$} (ctrl);
+    \draw[->] (ctrl) -- (out) node[above left] {$y$};
+\end{tikzpicture}
+\end{center}
+
+in three ways:
+\begin{enumerate}
+    \item Differential Equations (e.g. $\ddot y + 2t\dot y + y = u$ which cannot be solved via Laplace because it is not LTI)
+    \item Transfer function (e.g. $\frac{Y}{U} = \frac{s+1}{s^2 + 4s + 11}$)
+    \item State space (e.g. $\dot X = Ax + bu,\; Y = cx + du$) 
+\end{enumerate}
+
+As it happens, during the Space Race, the Americans were using transfer functions which excelled at single-input, single-output systems. For Sputnik, Lyapunov developed the state-space formulation which can handle \emph{multi-input, multi-output systems.}
+
+\tbf{Example (converting to state space):} Recall the spring-mass-damper system. 
+
+\begin{center}
+\begin{tikzpicture}[>=Stealth, thick]
+    % wall and ground
+    \fill[pattern=north east lines] (-0.3,0) rectangle (0,2.4);
+    \fill[pattern=north east lines] (-0.3,-0.3) rectangle (7.6,0);
+    \draw (0,2.4) -- (0,0) -- (7.6,0);
+
+    % mass
+    \draw (3.6,0) rectangle ++(2,2) node[midway] {$m$};
+
+    % spring
+    \draw[decoration={zigzag, segment length=7pt, amplitude=6pt, pre length=0.4cm, post length=0.4cm}, decorate]
+        (0,1.6) -- (3.6,1.6) node[midway, above=7pt] {$k$};
+
+    % damper
+    \draw (0,0.6) -- (1.3,0.6);
+    \draw (2.5,0.35) -- (1.3,0.35) -- (1.3,0.85) -- (2.5,0.85);
+    \draw (2.1,0.43) -- (2.1,0.77);
+    \draw (2.1,0.6) -- (3.6,0.6);
+    \node[above] at (1.9,0.85) {$c$};
+
+    % force
+    \draw[->] (5.6,1) -- ++(1.4,0) node[right] {$F(t)$};
+
+    % displacement
+    \draw[dashed, thin] (3.6,2) -- (3.6,2.8);
+    \draw[->] (3.6,2.6) -- ++(1,0) node[right] {$x$};
+\end{tikzpicture}
+\end{center}
+
+\[m\ddot x + c\dot x + kx = f\]
+
+We want to write this system as a state-space system of the form 
+\[\begin{cases}
+    \dot X = Ax + bu\\ 
+    Y = cx + du
+\end{cases}\]
+
+In general, the order of the differential equation will dictate the size of the matrix $A$. 
+
+For a second-order ODE, $A \in \R^{2 \times 2}$, $u \in \R^{2\times 1}, c \in \R^{1 \times 2}, d \in \R^{1 \times 1}, x \in \R^{2\times 1}$. 
+
+Define a \tbf{state variable}
+\[X = \begin{pmatrix}
+    x_1\\x_2
+\end{pmatrix}\]
+and suppose $x_1 = x$ (the position of the mass) and $x_2 = \dot x$ (the velocity). 
+
+In particular, this means 
+\[\dot x_1 = x_2\]
+so 
+\[\ddot x = \frac{1}{m}(f - c\dot x - kx) \implies \dot x_2 = \frac{1}{m}(f - cx_2 - kx_1)\]
+hence 
+\begin{align*}
+    \begin{bmatrix}
+        \dot x_1\\ \dot x_2
+    \end{bmatrix} &= \overbrace{\begin{bmatrix}
+        0 & 1\\ 
+        -\frac{k}{m} & -\frac{c}{m}
+    \end{bmatrix}}^A \begin{bmatrix}
+        x_1\\ x_2
+    \end{bmatrix} + \overbrace{\begin{bmatrix}
+        0\\ \frac{1}{m}
+    \end{bmatrix}}^B f\\ 
+    Y &= \underbrace{\begin{bmatrix}
+        1 & 0
+    \end{bmatrix}}_C \begin{bmatrix}
+        x_1\\ x_2
+    \end{bmatrix}
+\end{align*}
+(making the arbitrary choice that we want the position as our output)
+
+If instead we wanted $[x, \dot x]$ as our output, we could define 
+\[Y = \begin{bmatrix}
+        1 & 0\\ 
+        0 & 1
+    \end{bmatrix} \begin{bmatrix}
+        x_1\\ x_2
+    \end{bmatrix}\]
+
+This method lets us move from DiffEq to state space. How do we move from state space to transfer function or transfer function to state space?
+
+Trivially, to move from transfer function to state space just cross-multiply to recover the ODE and then move the state space. 
+
+The more difficult direction is state space to transfer function. Just take the Laplace and solve for $Y/U$.
+
+First, solving for $X(s)$:
+\begin{gather*}
+     s X(s) = AX(s) + BU(s)\\ 
+    (sI - A)X(s) = BU(s)\\ 
+    X(s) = (sI-A)^{-1} BU(s)\\ 
+\end{gather*}
+
+Then, substituting, 
+\begin{align*}
+    Y(s) &= CX(s) + DU(s)\\ 
+    &= (C(sI - A)^{-1} B + D)U(s)
+\end{align*}
+which gives the general form 
+\[\boxed{\frac{Y(s)}{U(s)} = C(sI - A)^{-1} B + D}\]
+
+In our example, 
+\begin{align*}
+    (sI - A) &= \begin{bmatrix}
+        s & -1\\ 
+        \frac{k}{m} & s + \frac{c}{m}
+    \end{bmatrix}\\ 
+    (sI- A)^{-1} &= \frac{1}{s(s + \frac{c}{m}) + \frac{k}{m}} \begin{bmatrix}
+        s + \frac{c}{m} & 1\\ 
+        -\frac{k}{m} & s
+    \end{bmatrix}\\ 
+    \frac{Y(s)}{U(s)} &=  C(sI - A)^{-1} B + D\\ 
+    &=  \frac{1}{s^2 + \frac{cs}{m} + \frac{k}{m}} \begin{bmatrix}
+        1 & 0
+    \end{bmatrix}\begin{bmatrix}
+        s + \frac{c}{m} & 1\\ 
+        -\frac{k}{m} & s
+    \end{bmatrix} \begin{bmatrix}
+        0 \\ \frac{1}{m}
+    \end{bmatrix}\\ 
+    &=  \frac{1}{s^2 + \frac{cs}{m} + \frac{k}{m}} \begin{bmatrix}
+        1 & 0
+    \end{bmatrix} \begin{bmatrix}
+        \frac{1}{m} \\ \frac{s}{m}
+    \end{bmatrix}\\ 
+    &=   \frac{1}{ms^2 + cs + k} 
+\end{align*}
+
+Which is exactly what we found via Laplace:
+\[m\ddot x + c\dot x + kx = f \implies ms^2X(s) + csX(s) + kX(s) = F \implies \frac{X(s)}{F(s)} = \frac{1}{ms^2 + cs + k}\] 
+
+The general \tbf{non-linear state space form} is 
+\[\begin{cases}
+    \dot x = f(x, u)\\ 
+    y = h(x, u)
+\end{cases}\]
+
+Nonlinear systems can be controlled either via \tbf{linearization} or \tbf{non-linear control}. Only linearization will be treated in this course. 
+
+Two basic methods: make a linear approximation (e.g. $\sin \theta = \theta$) or linearize around equilibria.
+
+\emph{Example:} Consider a transatlantic flight. Over the length of the flight, fuel usage can lead to a change in mass of almost 40\%. We would like our controller to respond to this change without needing to model the system continuously. 
+
+We can take advantage of times when the plane has constant speed (e.g. no acceleration) to solve for equilibria 
+\[\begin{cases}
+    \dot x = 0\\ 
+    f(x, u) \big\vert_{x_0, u_0} = 0\\ 
+    y = h(x_0, y_0)
+\end{cases} \implies \begin{matrix}
+    A = \frac{\partial f}{\partial x}\big\vert_{u_0, x_0} & 
+    C = \frac{\partial h}{\partial x}\big\vert_{u_0, x_0}\\ \\
+    B = \frac{\partial f}{\partial u}\big\vert_{u_0, x_0} & 
+    D = \frac{\partial h}{\partial u}\big\vert_{u_0, x_0}\\
+\end{matrix}\]
+in a higher dimensional analogue to  
+\[f(x) = f(x_0) + \frac{\partial f}{\partial x}\bigg\vert_{x_0} (x - x_0)\]
 \end{document}
