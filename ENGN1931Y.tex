@@ -1,4 +1,4 @@
-\documentclass[12pt]{report}
+\documentclass[12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage{geometry}
 \geometry{letterpaper, margin=0.25in}
@@ -27,7 +27,7 @@
 \usepackage[numbered,framed]{matlab-prettifier}
 \lstset{
   style              = Matlab-editor,
-  basicstyle         = \fontencoding{T1}\fontfamily{zi4}\selectfont\small, % Inconsolata, close to MATLAB's editor font
+  basicstyle         = \renewcommand{\ttdefault}{zi4}\fontencoding{T1}\ttfamily\small, % Inconsolata, close to MATLAB's editor font
   numberstyle        = \fontencoding{T1}\fontfamily{zi4}\selectfont\scriptsize\color{gray},
   escapechar         = ",
   mlshowsectionrules = true,
@@ -1579,4 +1579,739 @@ We can take advantage of times when the plane has constant speed (e.g. no accele
 \end{matrix}\]
 in a higher dimensional analogue to  
 \[f(x) = f(x_0) + \frac{\partial f}{\partial x}\bigg\vert_{x_0} (x - x_0)\]
+
+\section{Oct 1}
+
+\tbf{State Space Linearization:} Consider a nonlinear system
+\[\begin{cases}
+    \dot x = f(x, u)\\ 
+    y = h(x, u)
+\end{cases}\]
+
+General procedure:
+\begin{enumerate}
+    \item Find an equilibrium point $(x_0, u_0)$ such that $f(x_0, u_0) = 0$.
+    \item Calculate the Jacobians
+    \begin{align*}
+        A &= f_x(x_0, u_0)\\ 
+        B &= f_u(x_0, u_0)\\
+        C &= h_x(x_0, u_0)\\
+        D &= h_u(x_0, u_0)
+    \end{align*}
+    \item Form the state space system
+    \[\begin{cases}
+        \dot {\bar x} = A\bar x + B \bar u\\ 
+        \bar y = C\bar x + D \bar u
+    \end{cases}\]
+    where $\bar = x - x_0$ and $\bar u = u - u_0$.
+\end{enumerate}
+
+\tbf{Example:} Linearize the following system about $u_0 = 1$. 
+\[\begin{cases}
+    \dot x_1 = x_1 u - 1 = f_1(x, u)\\ 
+    \dot x_2 = -x_1^2 + x_2 + u = f_2(x, u)\\ 
+    y = x_1 + x_2 = h(x, u)
+\end{cases}\]
+
+First find the equilibrium point 
+\begin{align*}
+    \dot x_1 &= 0 = x_1 -1 \implies x_1 = 1\\ 
+    \dot x_2 &= 0 = -1 + x_2 + 1 \implies x_2 = 0\\
+    y &= x_1 + x_2 = 1
+\end{align*}
+giving $(x_0 = (x_{0_1}, x_{0_2}), u_0) = \big((1, 0), 1\big)$.
+
+Now the Jacobian matrices are
+\begin{align*}
+    A &= \begin{bmatrix}
+        \frac{\partial f_1}{\partial x_1} & \frac{\partial f_1}{\partial x_2}\\ 
+        \frac{\partial f_2}{\partial x_1} & \frac{\partial f_2}{\partial x_2}
+    \end{bmatrix}_{(x_0, u_0)} = \begin{bmatrix}
+        u & 0\\ 
+        -2x_1 & 1
+    \end{bmatrix}_{(x_0, u_0)} = \begin{bmatrix}
+        1 & 0\\ 
+        -2 & 1
+    \end{bmatrix}\\
+    B &= \begin{bmatrix}
+        \frac{\partial f_1}{\partial u}\\ 
+        \frac{\partial f_2}{\partial u}
+    \end{bmatrix}_{(x_0, u_0)} = \begin{bmatrix}
+        x_1\\ 
+        1
+    \end{bmatrix}_{(x_0, u_0)} = \begin{bmatrix}
+        1\\ 
+        1
+    \end{bmatrix}\\
+    C &= \begin{bmatrix}
+        \frac{\partial h}{\partial x_1} & \frac{\partial h  }{\partial x_2}
+    \end{bmatrix}_{(x_0, u_0)} = \begin{bmatrix}
+        1 & 1  
+    \end{bmatrix}_{(x_0, u_0)} = \begin{bmatrix}
+        1 & 1
+    \end{bmatrix}\\
+    D &= \frac{\partial h}{\partial u}_{(x_0, u_0)} = 0  
+\end{align*}
+
+So our state space system is
+\begin{align*}
+    \dot {\bar x} &= \begin{bmatrix}
+        1 & 0\\ 
+        -2 & 1
+    \end{bmatrix} \bar x + \begin{bmatrix}
+        1\\ 
+        1
+    \end{bmatrix} \bar u\\
+    &= \begin{bmatrix}
+        1 & 0\\ 
+        -2 & 1
+    \end{bmatrix} \begin{bmatrix}
+        x_1 - 1\\
+        x_2
+    \end{bmatrix} + \begin{bmatrix}
+        1\\ 
+        1
+    \end{bmatrix} (u - 1)\\
+    \bar y &= \begin{bmatrix}
+        1 & 1
+    \end{bmatrix} \bar x\\ 
+    &= \begin{bmatrix}
+        1 & 1
+    \end{bmatrix} \begin{bmatrix}
+        x_1 - 1\\
+        x_2
+    \end{bmatrix}
+\end{align*}
+which is a simple linear system that can be solved with the tools we have learned so far though it is only valid for small perturbations around the equilibrium point.
+
+\tbf{Example (Simulink):}
+
+\begin{center}
+\begin{tikzpicture}[>=Stealth, thick]
+    % wall and ground
+    \fill[pattern=north east lines] (-0.3,0) rectangle (0,2.4);
+    \fill[pattern=north east lines] (-0.3,-0.3) rectangle (7.6,0);
+    \draw (0,2.4) -- (0,0) -- (7.6,0);
+
+    % mass
+    \draw (3.6,0) rectangle ++(2,2) node[midway] {$m$};
+
+    % spring
+    \draw[decoration={zigzag, segment length=7pt, amplitude=6pt, pre length=0.4cm, post length=0.4cm}, decorate]
+        (0,1.6) -- (3.6,1.6) node[midway, above=7pt] {$k$};
+
+    % damper
+    \draw (0,0.6) -- (1.3,0.6);
+    \draw (2.5,0.35) -- (1.3,0.35) -- (1.3,0.85) -- (2.5,0.85);
+    \draw (2.1,0.43) -- (2.1,0.77);
+    \draw (2.1,0.6) -- (3.6,0.6);
+    \node[above] at (1.9,0.85) {$c$};
+
+    % force
+    \draw[->] (5.6,1) -- ++(1.4,0) node[right] {$F(t)$};
+
+    % displacement
+    \draw[dashed, thin] (3.6,2) -- (3.6,2.8);
+    \draw[->] (3.6,2.6) -- ++(1,0) node[right] {$x$};
+\end{tikzpicture}
+\end{center}
+\[m\ddot x + c\dot x + kx = F\]
+
+Recalling our Laplace rule for integration, we can draw a block diagram for this system:
+\begin{center}
+\begin{tikzpicture}[blockdiagram, block/.append style={minimum width=1.2cm, minimum height=0.9cm}, node distance=0.8cm and 1.2cm]
+    \node[input]                          (in)     {};
+    \node[sum, right=of in]               (sum)    {$\sum$};
+    \node[block, right=of sum]            (int1)   {$\frac{1}{s}$};
+    \node[branch, right=0.8cm of int1]    (split1) {};
+    \node[block, right=0.8cm of split1]   (int2)   {$\frac{1}{s}$};
+    \node[branch, right=0.8cm of int2]    (split2) {};
+    \node[output, right=0.8cm of split2]  (out)    {};
+    \node[block, below=of int1]           (damp)   {$c/m$};
+    \node[block, below=of damp]           (spring) {$k/m$};
+
+    \draw[->] (in) -- node[above left] {$F/m$} node[plus] {$+$} (sum);
+    \draw[->] (sum) -- node[above] {$\ddot x$} (int1);
+    \draw[->] (int1) -- node[above] {$\dot x$} (int2);
+    \draw[->] (int2) -- (out) node[above left] {$x$};
+
+    \draw[->] (split1) |- (damp);
+    \draw[->] (damp) -| node[pos=0.95, right] {$-$} (sum.-60);
+    \draw[->] (split2) |- (spring);
+    \draw[->] (spring) -| node[pos=0.95, left] {$-$} (sum.-120);
+\end{tikzpicture}
+\end{center}
+
+Defining $c, k, m$ as variables in our workspace, we can simulate this system in Simulink
+
+\begin{center}
+    \includegraphics[width=0.5\textwidth]{Images/mass_damper_simulink.png}
+\end{center}
+
+Using $m = 1$, $c = 1$, and $k = 1$, we can simulate the system with a step input of $F = 1$ and get the following output:
+
+\begin{center}
+    \includegraphics[width=0.5\textwidth]{Images/simulink_out.png}
+\end{center}
+
+In the matlab command window, we can also use some very powerful commands:
+\begin{lstlisting}[language=Matlab]
+    % define the system
+    s = tf('s');
+    Y = (s+1)/(s^2 + 5*s + 25);
+
+    % convert to state space
+    Yss = ss(Y)
+
+    % convert back to transfer function
+    Yp = tf(Yss)
+
+    % graph the step response
+    step(Yp)
+    grid on
+
+    % natural frequency and damping ratio
+    [omega, zeta] = damp(Yp)
+\end{lstlisting}
+
+\section{Oct 6}
+
+\tbf{Modelling Electrical Components:}
+
+\begin{center}
+    \begin{tabular}{l|c|c|c|c}
+        \hline
+        Component & Symbol & Voltage & Current & Imepedance\\
+        \hline
+        Resistor & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) to[R] (1.5,0); \end{circuitikz} & $V = iR$ & $i = \frac{V}{R}$ & $Z_R = R$\\
+        Capacitor (uF) & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) to[C] (1.5,0); \end{circuitikz} & $V = \frac{1}{C}\int i dt$ & $i = C\frac{dV}{dt}$ & $Z_C = \frac{1}{sC}$\\
+        Inductor (mH) & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) to[L] (1.5,0); \end{circuitikz} & $V = L\frac{di}{dt}$ & $i = \frac{1}{L}\int V dt$ & $Z_L = sL$\\
+        \hline
+    \end{tabular}
+\end{center}
+
+\tbf{Example:} What is the transfer function of the following circuit?
+\begin{center}
+    \begin{circuitikz}[american]
+        \draw (0,0) to[V, l=$V_i$, invert] (0,2)
+            to[R, l=$R$] (2.5,2)
+            to[L, l=$Ls$] (5,2)
+            to[short, -o] (6.5,2);
+        \draw (5,2) to[C, l_=$\frac{1}{Cs}$, *-*] (5,0);
+        \draw (0,0) to[short, -o] (6.5,0);
+        \draw (6.5,2) to[open, v^=$V_o$] (6.5,0);
+    \end{circuitikz}
+    
+\end{center}
+
+\begin{align*}
+    V_i &= iR + i Ls + i \frac{1}{Cs} = i(R + Ls + \frac{1}{Cs})\\ 
+    I(s) &= \frac{V_i(s)}{R + Ls + \frac{1}{Cs}}\\
+    V_o &= I \frac{1}{Cs}\\ 
+    \frac{V_o(s)}{V_i(s)} &= \frac{\frac{1}{Cs}}{R + Ls + \frac{1}{Cs}} = \frac{1}{LCs^2 + RCs + 1}
+\end{align*}
+
+Putting this in the second order form 
+\[\frac{1}{s^2 + 2\zeta\omega_n s + \omega_n^2} \implies \omega_n^2 = \frac{1}{LC}, \quad 2\zeta \omega_n = \frac{R}{L}\]
+
+\tbf{Modelling Mechanical Systems:}
+
+\begin{center}
+    \begin{tabular}{l|c|c}
+        \hline
+        Component & Symbol & Force/Torque\\
+        \hline
+        Mass & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) to[short] (0.45,0) node[draw, minimum width=0.6cm, minimum height=0.5cm, anchor=west] {$m$}; \draw[-Stealth] (1.2,0.35) -- (1.6,0.35) node[right] {$x$}; \end{circuitikz} & $F = m\ddot{x}$\\
+        Damper & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) to[damper] (1.5,0); \end{circuitikz} & $F = c\dot{x}$\\
+        Spring & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) to[spring] (1.5,0); \end{circuitikz} & $F = kx$\\
+        Torsional mass & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) -- (1.5,0); \draw[fill=white] (0.75,0) ellipse[x radius=0.1, y radius=0.3]; \draw[-{Stealth[length=3pt]}, semithick] (1.2,0.25) arc[start angle=90, end angle=-200, x radius=0.15, y radius=0.25] node[pos=0, above, inner sep=1pt] {$\theta$}; \end{circuitikz} & $T = I\ddot{\theta}$\\
+        Torsional damper & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) to[damper] (1.5,0) -- (2,0); \draw[-{Stealth[length=3pt]}, semithick] (1.75,0.25) arc[start angle=90, end angle=-200, x radius=0.15, y radius=0.25] node[pos=0, above, inner sep=1pt] {$\theta$}; \end{circuitikz} & $T = c\dot{\theta}$\\
+        Torsional spring & \begin{circuitikz}[baseline=-0.5ex, scale=0.6, transform shape] \draw (0,0) to[spring] (1.5,0) -- (2,0); \draw[-{Stealth[length=3pt]}, semithick] (1.75,0.25) arc[start angle=90, end angle=-200, x radius=0.15, y radius=0.25] node[pos=0, above, inner sep=1pt] {$\theta$}; \end{circuitikz} & $T = k\theta$\\
+        \hline
+    \end{tabular}
+\end{center}
+
+\tbf{Gears:}
+\begin{center}
+\begin{tikzpicture}[thick, rot/.style={-{Stealth[length=4pt]}, semithick}]
+    % gear 1 (N_1 teeth), input shaft from the left
+    \draw (0,1.8) -- (0,3.2);
+    \draw (-0.15,3.2) -- (0.15,3.2);
+    \draw (-0.15,1.8) -- (0.15,1.8);
+    \node[right] at (0.15,2.8) {$N_1$};
+    \draw (-2,2.5) -- (0,2.5);
+    \draw[rot] (-1.4,2.8) arc[start angle=90, end angle=-200, x radius=0.15, y radius=0.3];
+    \node[above] at (-1.4,2.8) {$T_1, \theta_1$};
+
+    % gear 2 (N_2 teeth), output shaft to the right driving inertia J
+    \draw (0,-0.4) -- (0,1.7);
+    \draw (-0.15,1.7) -- (0.15,1.7);
+    \draw (-0.15,-0.4) -- (0.15,-0.4);
+    \node[right] at (0.15,0) {$N_2$};
+    \draw (0,0.65) -- (2.2,0.65);
+    \draw[rot] (0.9,0.95) arc[start angle=90, end angle=-200, x radius=0.15, y radius=0.3];
+    \node[above] at (0.9,0.95) {$T_2, \theta_2$};
+    \draw (2.2,0.2) rectangle (3.1,1.1);
+    \node[right] at (3.1,0.65) {$J$};
+\end{tikzpicture}
+\end{center}
+
+For $N_i$ the number of teeth, 
+\[\frac{T_1}{T_2} = \frac{\theta_2}{\theta_1} = \frac{N_1}{N_2}\]
+
+\tbf{DC Motor:}
+\begin{center}
+\begin{circuitikz}[american, rot/.style={-{Stealth[length=4pt]}, semithick}]
+    % armature circuit
+    \draw (0,2.5) to[short, o-] (0.5,2.5)
+        to[L, l=$L_a$, i>^=$i_a$] (2.75,2.5)
+        to[R, l=$R_a$] (5,2.5);
+    \draw (0,2.5) to[open, v^=$E_a$] (0,0);
+    \node[elmech] (M) at (5,1.25) {M};
+    \draw (5,2.5) -- (M.north);
+    \draw (M.south) -- (5,0) to[short, -o] (0,0);
+
+    % shaft to rotor inertia J_m with viscous friction b
+    \draw[thick] (M.east) -- (7.5,1.25);
+    \draw[rot] (6.5,1.55) arc[start angle=90, end angle=-200, x radius=0.15, y radius=0.3];
+    \node[above] at (6.5,1.55) {$\omega, \theta$};
+    \draw (7.5,0.85) rectangle (8.4,1.65);
+    \node at (7.95,1.25) {$J$};
+
+\end{circuitikz}
+\end{center}
+where $a$ is the \emph{armature} (related to the winding). We want $\theta/E$ and $\omega/E$. 
+
+When the motor is spinning, it generates a back EMF $V_{BEMF} = K_b \omega$, and a torque $T = K_t i_a$ where $K_b$ and $K_t$ are constants given in the motor datasheet.
+
+Hence, the system can be described by:
+\begin{align*}
+    E_a &= L \frac{di_a}{dt} + Ri_a + V_{BEMF}\\ 
+    T &= J\ddot \theta = K_T i_a   
+\end{align*}
+Taking the Laplace transforms, 
+\begin{align*}
+    I_a(s) &= \frac{Js^2}{K_T} \theta(s)\\
+    E_a(s) &= L s I_a(s) + R I_a(s) + K_b s\theta(s)\\
+        &= (Ls + R) \frac{Js^2}{K_T} \theta(s) + K_b s\theta(s)\\
+    \frac{\theta(s)}{E_a(s)} &= \frac{K_T}{J L s^3 + J R s^2 + K_b K_T s}\\
+    \frac{\omega(s)}{E_a(s)} &= \frac{K_T}{J L s^2 + J R s + K_b K_T}
+\end{align*}
+since $\omega = \dot \theta \implies \omega(s) = s\theta(s)$.
+
+In a typical system, we might have $L \approx 10$ mH and $R \approx 20 \Omega$ so $L/R \approx 10^{-4}$, making 
+\[\frac{\omega}{E_a} \approx \frac{B}{s + A}\]
+a reasonable approximation.
+
+\tbf{Transfer function decomposition:} Consider the general transfer function
+\[H(s) = \frac{b_1s^m + b_2 s^{m-1} + \dots + b_{m+1}}{s^n + a_1 s^{n-1} + \dots + a_n} = \frac{k \prod_{i=1}^m (s - z_i)}{\prod_{i=1}^n (s - p_i)}\]
+which can be decomposed into products of poles and zeros. 
+
+\emph{Example:} 
+\[G(s) = \frac{k(s+1)(s+2)}{s(s+3)(s + 10)(s^2 + s + 2)}\]
+has zeroes at $\{-1, -2\}$ and poles at $\{0, -3, -10, -1 \pm i\}$.
+
+In matlab, we can use 
+\begin{lstlisting}
+    s = tf('s');
+    G = (s+1)*(s+2)/(s*(s+3)*(s+10)*(s^2 + s + 2));
+    [omega, zeta, poles] = damp(G)
+\end{lstlisting}
+
+For a first-order system, 
+\[G(s) = \frac{a}{s + a} = \frac{1}{\tau s + 1}\]
+where $\tau = 1/a$ is the time constant.
+
+If 
+\[Y(s) = \frac{a}{(s + a)} \cdot \frac{1}{s} \implies y(t) = 1 - e^{-at}\]
+(or else $1 - e^{-t/\tau}$) 
+
+As a function of $\tau$, the system response to a step varies: 
+\begin{center}
+\begin{tikzpicture}
+    \begin{axis}[
+        width=0.6\textwidth, height=5cm,
+        xmin=0, xmax=30, ymin=0, ymax=1.2,
+        xlabel={$t$}, ylabel={$y(t)$},
+        axis lines=left, ytick=\empty, xtick=\empty,
+        label style={font=\small}, tick label style={font=\small}
+    ]
+        \addplot[dashed, gray, domain=0:30, samples=2] {1};
+        \foreach \tau in {1,2,4,7,10} {
+            \addplot[thick, blue!70!black, domain=0:30, samples=150] {1 - exp(-x/\tau)};
+        }
+   
+        \draw[semithick, -{Stealth[length=6pt, width=5pt]}, shorten >=1pt] (axis cs:6,1.12) node[right, font=\small] {$\tau = 1$} -- (axis cs:1.8,0.835);
+        \draw[semithick, -{Stealth[length=6pt, width=5pt]}, shorten >=1pt] (axis cs:24,0.45) node[right, font=\small] {$\tau = 10$} -- (axis cs:20,0.865);
+    \end{axis}
+\end{tikzpicture}
+\end{center}
+
+To specify a first-order system, we can use 
+\begin{itemize}
+    \item Rise time $t_r$ (time to go from 10\% to 90\% of final value)
+    \item Settling time $t_s$ (time to reach and stay within 5\% of final value)
+    \item Overshoot $M_p$ ($\frac{y_{max}}{y_{ss}} - y_{ss} \cdot 100\%$, though this is zero for all first-order systems)
+\end{itemize}
+
+\begin{center}
+\begin{tikzpicture}
+    \begin{axis}[
+        width=0.75\textwidth, height=7.5cm,
+        xmin=0, xmax=16, ymin=0, ymax=1.5,
+        xlabel={$t$}, ylabel={$y(t)$},
+        xlabel style={at={(ticklabel* cs:1)}, anchor=west},
+        axis lines=left, xtick=\empty,
+        ytick={0.1,0.9,1}, yticklabels={$0.1$,$0.9$,$1$},
+        label style={font=\small}, tick label style={font=\small},
+        clip=false
+    ]
+        % 5% settling band
+        \fill[gray!15] (axis cs:0,0.95) rectangle (axis cs:16,1.05);
+        \addplot[dashed, gray, domain=0:16, samples=2] {1};
+        \addplot[dotted, gray, domain=0:16, samples=2] {1.05};
+        \addplot[dotted, gray, domain=0:16, samples=2] {0.95};
+
+        % underdamped step response, zeta = 0.3, omega_n = 1
+        \addplot[thick, blue!70!black, domain=0:16, samples=300]
+            {1 - exp(-0.3*x)*(cos(deg(0.9539*x)) + 0.3145*sin(deg(0.9539*x)))};
+
+        % rise time: 10% -> 90%
+        \draw[densely dashed, red!70!black] (axis cs:0.473,0) -- (axis cs:0.473,0.1);
+        \draw[densely dashed, red!70!black] (axis cs:1.794,0) -- (axis cs:1.794,0.9);
+        \draw[densely dashed, gray] (axis cs:0,0.1) -- (axis cs:0.473,0.1);
+        \draw[densely dashed, gray] (axis cs:0,0.9) -- (axis cs:1.794,0.9);
+        \draw[{Stealth[length=5pt]}-{Stealth[length=5pt]}, semithick, red!70!black]
+            (axis cs:0.473,-0.1) -- node[below, font=\small] {$t_r$} (axis cs:1.794,-0.1);
+
+        % overshoot
+        \draw[densely dashed, gray] (axis cs:3.293,1.372) -- (axis cs:5,1.372);
+        \draw[{Stealth[length=5pt]}-{Stealth[length=5pt]}, semithick, orange!80!black]
+            (axis cs:4.6,1) -- node[right, font=\small] {$M_p$} (axis cs:4.6,1.372);
+
+        % settling time: enters and stays within +-5%
+        \draw[densely dashed, green!50!black] (axis cs:10.14,0) -- (axis cs:10.14,1.05);
+        \draw[{Stealth[length=5pt]}-{Stealth[length=5pt]}, semithick, green!50!black]
+            (axis cs:0,-0.3) -- node[below, font=\small] {$t_s$} (axis cs:10.14,-0.3);
+        \node[right, font=\small, gray!60!black] at (axis cs:16,1.05) {$\pm 5\%$};
+    \end{axis}
+\end{tikzpicture}
+\end{center}
+
+\emph{Example:} If $G(s) = \frac{1}{0.1s + 1}$, and $T_r = 2.2 \tau$ and $T_s = 3\tau$, how long are the rise time and settling time?
+\begin{align*}
+    T_r &= 2.2 \tau = 2.2(0.1) = 0.22\\
+    T_s &= 3 \tau = 3(0.1) = 0.3
+\end{align*}
+
+The canonical form for a second-order system is 
+\[G(s) = \frac{\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2}\]
+which responds to a step input $1/s$ as 
+\begin{align*}
+    Y(s) &= \frac{\omega_n^2}{s(s^2 + 2\zeta\omega_n s + \omega_n^2)}\\
+    y(t) &= 1 - e^{-\zeta\omega_n t}(\cos (\omega_d t)+ \frac{\zeta}{\sqrt{1 - \zeta^2}} \sin (\omega_d t))
+\end{align*}
+where $\omega_d = \omega_n \sqrt{1 - \zeta^2}$ is the damped natural frequency.
+
+For fixed $\omega_n$, decreasing $\zeta$ gives a faster rise but more overshoot and oscillation:
+\begin{center}
+\begin{tikzpicture}
+    \begin{axis}[
+        width=0.68\textwidth, height=6.5cm,
+        xmin=0, xmax=15, ymin=0, ymax=1.85,
+        xlabel={$\omega_n t$}, ylabel={$y(t)$},
+        xlabel style={at={(ticklabel* cs:1)}, anchor=west},
+        axis lines=left, xtick=\empty, ytick={1},
+        label style={font=\small}, tick label style={font=\small},
+        legend style={at={(1.03,0.5)}, anchor=west, font=\small, draw=none},
+        legend cell align=left,
+        domain=0:15, samples=250, thick
+    ]
+        \addplot[dashed, gray, samples=2, forget plot] {1};
+        % underdamped: 1 - e^{-zeta t}(cos(wd t) + zeta/sqrt(1-zeta^2) sin(wd t))
+        \addplot[red!80!black] {1 - exp(-0.1*x)*(cos(deg(sqrt(1-0.1^2)*x)) + 0.1/sqrt(1-0.1^2)*sin(deg(sqrt(1-0.1^2)*x)))};
+        \addlegendentry{$\zeta = 0.1$}
+        \addplot[orange!90!black] {1 - exp(-0.3*x)*(cos(deg(sqrt(1-0.3^2)*x)) + 0.3/sqrt(1-0.3^2)*sin(deg(sqrt(1-0.3^2)*x)))};
+        \addlegendentry{$\zeta = 0.3$}
+        \addplot[green!50!black] {1 - exp(-0.5*x)*(cos(deg(sqrt(1-0.5^2)*x)) + 0.5/sqrt(1-0.5^2)*sin(deg(sqrt(1-0.5^2)*x)))};
+        \addlegendentry{$\zeta = 0.5$}
+        \addplot[teal] {1 - exp(-0.7*x)*(cos(deg(sqrt(1-0.7^2)*x)) + 0.7/sqrt(1-0.7^2)*sin(deg(sqrt(1-0.7^2)*x)))};
+        \addlegendentry{$\zeta = 0.7$}
+        % critically damped
+        \addplot[blue!70!black] {1 - exp(-x)*(1 + x)};
+        \addlegendentry{$\zeta = 1$}
+        % overdamped, zeta = 2: poles at -(2 -+ sqrt 3)
+        \addplot[violet] {1 - (3.732*exp(-0.268*x) - 0.268*exp(-3.732*x))/3.464};
+        \addlegendentry{$\zeta = 2$}
+    \end{axis}
+\end{tikzpicture}
+\end{center}
+
+\section{Oct 8}
+
+\tbf{Recall:} A first order system has canonical transfer function 
+\[G(s) = \frac{C(s)}{R(s)} = \frac{1}{\tau s+ 1} = \frac{a}{s + a}, \qquad a = 1/\tau\]
+corresponding to the differential equation
+\[\dot c + ac = ar\]
+
+For a unit step input, 
+\begin{align*}
+    C(s) &= G(s) R(s) = \frac{a}{s + a} \cdot \frac{1}{s}\\ 
+    c(t) &= 1 - e^{-at} = 1 - e^{-t/\tau}
+\end{align*}
+
+\begin{lstlisting}[language=Matlab]
+    figure(1)
+    for tau=0.1:2:10
+        Y = tf(1, [tau 1]);
+        hold on;
+        step(Y);
+    end
+\end{lstlisting}
+produces 
+\begin{center}
+    \includegraphics[width=0.5\textwidth]{Images/first_order_step.png}
+\end{center}
+
+The \emph{rise time} is the time it takes to go from 10\% to 90\% of the final value, and the \emph{settling time} is the time it takes to reach and stay within a specified percentage of the final value (commonly 5\%).
+
+A second order system has canonical transfer function
+\[G(s) = \frac{\omega_n^2}{s^2 + 2\zeta\omega_n s + \omega_n^2} = \frac{\omega_n^2}{(s+\zeta\omega_n)^2 + \omega_n^2(1-\zeta^2)}\]
+corresponding to the differential equation
+\[\ddot c + 2\zeta \omega_n \dot c + \omega_n^2 c = \omega_n^2 r\] 
+where $\omega_n$ is the undamped natural frequency (rad/s), $\zeta$ is the damping ration, and $\omega_d$ is the damped natural frequency (rad/s). 
+
+Under a step response,
+\begin{align*}
+    C(s) &= G(s)R(s)\\ 
+    &=  \frac{\omega_n^2}{s(s^2 + 2\zeta\omega_n s + \omega_n^2)}\\ 
+    &= \frac{1}{s} + \frac{A_1s + A_2}{s^2 + 2\zeta\omega_n s + \omega_n^2}\\ 
+    &= \frac{1}{s} - \frac{s + \zeta\omega_n + \omega_d(\zeta \omega_n/\omega_d)}{(s + \zeta\omega_n)^2 + \omega_d^2}\\
+    &= \frac{1}{s} - \frac{s + \zeta\omega_n + \omega_d(\zeta / \sqrt{1 - \zeta^2})}{(s + \zeta\omega_n)^2 + \omega_d^2}\\ 
+    c(t) &= 1 - e^{-\zeta\omega_n t} \left( \cos(\omega_d t) + \frac{\zeta}{\sqrt{1 - \zeta^2}} \sin(\omega_d t) \right)\\ 
+    &= 1 - \frac{e^{-\zeta \omega_n t}}{\sqrt{1 - \zeta^2}} \left[\sqrt{1 - \zeta^2} \cos(\omega_d t) + \zeta(\omega_d t)\right]\\ 
+    &= 1 - \frac{e^{-\zeta \omega_n t}}{\sqrt{1 - \zeta^2}} \cos(\omega_d t - \phi), \qquad \phi = \sin^{-1}(\zeta)
+\end{align*}
+if $0 < \zeta < 1$ (underdamped) then we have two complex conjugate poles, if $\zeta = 1$ (critically damped) then we have a repeated real pole, and if $\zeta > 1$ (overdamped) then we have two distinct real poles. If $\zeta < 0$, we have an unstable system and the step response will diverge. If $\zeta = 0$, the system is undamped and the step response will oscillate indefinitely.
+
+These particular equations, however, will collapse for $\zeta \geq 1$ so we need to go back to the inverse Laplace transform to find the step response for these cases.
+
+Note that Matlab does not care about $\zeta \geq 1$ since it uses the state space form. 
+
+\begin{lstlisting}[language=Matlab]
+    figure(1)
+    omega_n = 2*pi;
+
+    for zeta=0:0.2:1.2
+        Y = tf(omega_n^2, [1 2*zeta*omega_n omega_n^2]);
+        hold on;
+        step(Y);
+    end
+\end{lstlisting}
+produces 
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/second_order_step.png}
+\end{center}
+
+We can graph the impulse response of a system for various values of $s$:
+
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/s_plane.png}
+\end{center}
+with the LHS being the stable region and the RHS being the unstable region. Notice also that the negative imaginary axis is the conjugate of the positive imaginary axis so the graph is symmetric.
+
+This leads to the mantra \emph{the poles govern the system behavior.} This will be essential when we start designing controllers for systems.
+
+\tbf{Example:} Consider the system
+\[\frac{1}{(s +3)(s + 10)}\]
+
+We have poles at $s = \{-3, -10\}$ so by intuition, the system is stable. 
+
+And as expected, verifying the impulse response in Matlab, we get the following graph:
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/impulse_example.png}
+\end{center}
+
+\tbf{Pole location as a function of $\zeta$:}
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/pole_geometry.png}
+\end{center}
+so for example 
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/damping_angle.png}
+\end{center}
+
+Notice the quantity $\sigma = -\zeta \omega_n$. This is the real part of the pole and is called the \emph{decay rate}. We can draw the \emph{decay envelope} of the system as $\pm e^{-\sigma t}$ 
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/impulse_envelope.png}
+\end{center}
+
+\tbf{Specifications of a second order system:}
+\begin{itemize}
+    \item Peak time $T_p$: time to first peak (if $\zeta < 1$)
+    \item Rise time $T_r$
+    \item Settling time $T_s$
+    \item Percent Overshoot (OS\%/ $M_p$)
+    \[M_p = \frac{y_{max} - y_{ss}}{y_{ss}} \cdot 100\%\]
+\end{itemize}
+
+$T_r$, $T_p$, and $\omega_n$ affect the speed of convergence while $M_p$ and $\zeta$ affect the stability. Naturally, $T_r$ and $T_p$ increase together. 
+
+We can also go the other way and find the damping ratio and natural frequency from the shape of the response. This can give us \tbf{contours on the s-plane:}
+
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/s_plane_contours.png}
+\end{center}
+
+\tbf{Example:}
+\[G(s) = \frac{K}{s^2 + 4s + K} = \frac{\omega_n^2}{    s^2 + 2\zeta\omega_n s + \omega_n^2}\]
+
+For any gain $K$, we know:
+\begin{itemize}
+    \item $\zeta \omega_n = 2$ rad/s
+    \item settling time $T_s = 4/(\zeta \omega_n) = 2$ s 
+\end{itemize}
+
+If we set $K = 16$, then $\omega_n = 4$ rad/s and $\zeta = 0.5$. 
+
+Increasing $K$ 
+\begin{enumerate}
+    \item decreases $\zeta$
+    \item increases OS\%
+    \item increases $\omega_n$ and $\omega_d$ (decreases $T_p$ and $T_r$) leading to a faster response
+\end{enumerate}
+
+\tbf{Third order system:} 
+
+Adding a pole will 
+\begin{enumerate}
+    \item Slow the system response 
+    \item Decrease overshoot 
+\end{enumerate}
+
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/pole_effects.png}
+\end{center}
+
+Adding zeros will
+\begin{enumerate}
+    \item Speed up the system response
+    \item Increase overshoot
+    \item Complex zero can cause undershoot
+\end{enumerate}
+
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/zero_effects.png}
+\end{center}
+
+The effects of poles and zeros are reduced as they move further to the LHP of the s-plane. Zeros can also be used to cancel out poles.
+
+RHP zeros are called \tbf{non-minimum phase zeros} and cause unstable undershoot. 
+
+\tbf{Dominant poles:} quality of systems with both a 2nd order pair and other zeros/poles which are all stable (or where they are so far LHP that they don't affect the system response). 
+
+The time response of the system is \emph{dominated} by the 2nd order pair.
+
+\emph{Example:} Consider a system with poles $s_{1, 2} = -5\pm 3j$ , $s_3 = -25$. The pole at $-25$ is greater than 5 times the real-part of the 2nd order pole and decays so fast that it has no effect on the system response.
+
+As a rule of thumb, \emph{if the pole is 3-5 times greater than lowest real-part poles, they can be ignored.}
+
+\tbf{Matlab Example:}
+
+\begin{lstlisting}[language=Matlab]
+    s = tf('s');
+
+    T = 100/(s^2 + 6*s + 100);
+    T2 = T * 1/(0.1*s + 1); % add a pole 
+    T3 = T * (0.1*s + 1); % add a zero
+
+    T4 = T * (0.1*s - 1); % switch directions
+
+    figure(1)
+    step(T, T2, T3, T4)
+    grid 
+    legend 
+    shg 
+\end{lstlisting}
+
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/adding_poles_zeros.png}
+\end{center}
+
+\tbf{Example:} 
+\begin{lstlisting}[language=Matlab]
+    s = tf('s');
+    Tc = (s + 10) * (s + 5) / ((s^2 + 20*s + 100) * (s + 5)) % a complicated TF 
+    step(Tc)
+\end{lstlisting}
+
+\begin{center}
+    \includegraphics[width=0.8\textwidth]{Images/steady_state_error.png}
+\end{center}
+
+Notice that even though we had a step response and the system is stable, the response does not converge to $1$. This is because the gain (the zero order terms) are on the order of $50/500 = 0.1$, giving a \tbf{steady-state error.} 
+
+\begin{exercise}
+    \textbf{Exercise:} 
+
+    \begin{center}
+            
+        \usetikzlibrary{arrows.meta, calc}
+            
+        \begin{tikzpicture}[
+            blk/.style={draw, thick, minimum height=0.8cm, minimum width=1cm, inner sep=4pt},
+            sumj/.style={draw, thick, circle, inner sep=0pt, minimum size=0.7cm},
+            dot/.style={circle, fill, inner sep=0pt, minimum size=4pt},
+            io/.style={circle, draw, fill=white, inner sep=0pt, minimum size=5pt},
+            bd/.style={>=Stealth, thick, font=\small}
+        ]
+            \node[io, label=left:{$U(s)$}] (u) at (0,0) {};
+            \node[sumj] (s1) at (2,0) {$\Sigma$};
+            \node[blk] (i1) at (3.6,0) {$\frac{1}{s}$};
+            \node[blk] (i2) at (6.4,0) {$\frac{1}{s}$};
+            \node[blk] (i3) at (9.2,0) {$\frac{1}{s}$};
+            \node[blk] (b3) at (11.4,0) {$b_3$};
+            \node[sumj] (s2) at (13,1.4) {$\Sigma$};
+            \node[io, label=right:{$Y(s)$}] (y) at (14.4,1.4) {};
+            \node[blk] (b1) at (6.4,2.6) {$b_1$};
+            \node[blk] (b2) at (9.2,1.4) {$b_2$};
+            \node[blk] (a1) at (3.6,-1.2) {$-a_1$};
+            \node[blk] (a2) at (3.6,-2.3) {$-a_2$};
+            \node[blk] (a3) at (3.6,-3.4) {$-a_3$};
+
+            \coordinate (x1) at (4.8,0);
+            \coordinate (x2) at (7.6,0);
+            \coordinate (x3) at (10.3,0);
+            \node[dot] at (x1) {}; \node[dot] at (x2) {}; \node[dot] at (x3) {};
+
+            \draw[->] (u) -- (s1) node[pos=0.85, above] {$+$};
+            \draw[->] (s1) -- (i1);
+            \draw[->] (i1) -- (i2);
+            \draw[->] (i2) -- (i3);
+            \draw[->] (i3) -- (b3);
+            \node[above left] at (x1) {$X_1$};
+            \node[above left] at (x2) {$X_2$};
+            \node[above left] at (x3) {$X_3$};
+            \draw[->] (b3) -| (s2) node[pos=0.9, right] {$+$};
+            \draw[->] (b1) -| (s2) node[pos=0.9, right] {$+$};
+            \draw[->] (b2) -- (s2) node[pos=0.85, above] {$+$};
+            \draw[->] (s2) -- (y);
+
+            \draw[->] (x1) |- (b1);
+            \draw[->] (x2) |- (b2);
+            \draw[->] (x1) |- (a1);
+            \draw[->] (x2) |- (a2);
+            \draw[->] (x3) |- (a3);
+            \draw[->] (a1.west) -- ++(-0.5,0) -- (s1.south east);
+            \draw[->] (a2) -| (s1);
+            \draw[->] (a3) -| (0.9,-0.8) -- (s1.south west);
+            \node[font=\scriptsize] at ($(s1.south east)+(0.3,0.05)$) {$+$};
+            \node[font=\scriptsize] at ($(s1.south)+(0.18,-0.3)$) {$+$};
+            \node[font=\scriptsize] at ($(s1.south west)+(-0.3,0.05)$) {$+$};
+        \end{tikzpicture}
+    \end{center}
+
+    (See HW 2 Problem 1)
+\end{exercise}
+
 \end{document}
